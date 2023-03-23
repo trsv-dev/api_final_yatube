@@ -124,5 +124,8 @@ class Follow(models.Model):
                 name='unique_user_following'
             )
         ]
-        verbose_name = 'Подписка',
+        verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
+
+    def __str__(self):
+        return f'Подписка {self.user} на {self.following}'

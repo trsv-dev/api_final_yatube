@@ -40,15 +40,22 @@ class CommentViewSet(viewsets.ModelViewSet):
     permission_classes = (AuthorOrReadOnly,
                           IsAuthenticatedOrReadOnly)
 
-    def get_queryset(self):
+    def get_post(self):
+        """
+        Функция возвращает post чтобы не дублировать код
+        его получения в get_queryset() и perform_create().
+        """
         post_id = self.kwargs.get('post_id')
         post = get_object_or_404(Post, pk=post_id)
+        return post
+
+    def get_queryset(self):
+        post = self.get_post()
         queryset = post.comments.select_related('author')
         return queryset
 
     def perform_create(self, serializer):
-        post_id = self.kwargs.get('post_id')
-        post = get_object_or_404(Post, pk=post_id)
+        post = self.get_post()
         serializer.save(author=self.request.user, post=post)
 
 
@@ -60,8 +67,15 @@ class FollowViewSet(CreateAndListViewSet):
     search_fields = ('following__username',)
 
     def get_queryset(self):
+        """
+        Для получения queryset используем prefetch_related,
+        т.к. user и following имеют отношение "многие-ко-многим".
+        Экспериментальным путём установлено, что
+        длина запроса уменьшается в разы.
+        """
         user = get_object_or_404(User, username=self.request.user)
-        queryset = Follow.objects.filter(user=user)
+        queryset = Follow.objects.prefetch_related(
+            'user', 'following').filter(user=user)
         return queryset
 
     def perform_create(self, serializer):
